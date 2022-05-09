@@ -1,0 +1,22 @@
+spring:
+  profiles:
+    active: local
+  
+camel:
+  springboot:
+    name: int-do
+  component:
+    servlet:
+      mapping:
+        contextPath: /api/*
+
+management:
+  server:
+    port: 8081
+
+  endpoints:
+    enabled-by-default: false
+  endpoint:
+    health:
+      enabled: true
+

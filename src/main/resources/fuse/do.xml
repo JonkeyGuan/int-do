@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://camel.apache.org/schema/spring       http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+    <camelContext id="context-do" streamCache="true" xmlns="http://camel.apache.org/schema/spring">
+
+        <dataFormats>
+            <json id="inventory" library="Jackson" unmarshalTypeName="com.mi.intdo.model.Inventory"/>
+            <json id="delivery" library="Jackson" unmarshalTypeName="com.mi.intdo.model.Delivery"/>
+        </dataFormats>
+
+        <rest bindingMode="json" enableCORS="true" id="rest-do">
+            <post id="do" uri="/do" type="com.mi.intdo.model.DeliveryOrderApplication" outType="com.mi.intdo.model.DeliveryOrder" consumes="application/json" produces="application/json">
+                <to uri="direct:do" />
+            </post>
+        </rest>
+
+        <route id="route-do">
+            <from id="from-do" uri="direct:do" />
+            <log id="log-request" loggingLevel="INFO" message="Inbound: ${body}"/>
+            <bean id="requestReserveProcessor" ref="requestReserveProcessor" />
+            <bean id="requestQuantProcessor" ref="requestQuantProcessor" />
+
+            <bean id="inventoryUriProcessor" ref="inventoryUriProcessor" />
+            <bean id="inventoryRequestProcessor" ref="inventoryRequestProcessor" />
+            <log id="log-inventory-request" loggingLevel="INFO" message="Inventory request: ${body}"/>
+            <toD id="http-to-inventory" uri="http4://dummy" />
+            <unmarshal id="inventory-unmarshal" ref="inventory"/>
+            <log id="log-inventory-reply" loggingLevel="INFO" message="Inventory response: ${body}"/>
+
+            <bean id="stockQuantProcessor" ref="stockQuantProcessor" />
+            <choice id="sotck-check-choice">
+                <when id="sotck-check-choice-when-pass">
+                    <simple>${exchangeProperty.stockQuant} >= ${exchangeProperty.requestQuant}</simple>
+                    <log id="log-sotck-check-when-pass" loggingLevel="INFO" message="Enough quant for the delivery order"/>
+                    <bean id="deliveryUriProcessor" ref="deliveryUriProcessor" />
+                    <log id="log-delivery-request" loggingLevel="INFO" message="Delivery request: ${body}"/>
+                    <toD id="http-to-delivery" uri="http4://dummy" />
+                    <unmarshal id="delivery-unmarshal" ref="delivery"/>
+                    <bean id="stockEnoughProcessor" ref="stockEnoughProcessor"/>
+                    <log id="log-delivery-reply" loggingLevel="INFO" message="Delivery response: ${body}"/>
+                </when>
+                <otherwise id="sotck-check-choice-when-otherwise">
+                    <log id="log-sotck-check-log-when-pass" loggingLevel="INFO" message="Not enough quant for the delivery order"/>
+                    <bean id="stockNotEnoughProcessor" ref="stockNotEnoughProcessor"/>
+                </otherwise>
+            </choice>
+  
+            <log id="log-response" loggingLevel="INFO" message="Outbound: ${body}"/>
+        </route>
+
+    </camelContext>
+</beans>

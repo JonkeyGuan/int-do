@@ -1,0 +1,80 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: int-do
+spec:
+  to:
+    kind: Service
+    name: int-do
+  port:
+    targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: int-do
+  labels:
+    app: int-do
+spec:
+  ports:
+    - port: 8080
+      name: http
+  selector:
+    app: int-do
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: int-do
+  labels:
+    app: int-do
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: int-do
+  template:
+    metadata:
+      labels:
+        app: int-do
+    spec:
+      containers:
+        - name: app
+          image: image-registry.openshift-image-registry.svc:5000/fuse/int-do
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: app
+              protocol: TCP
+            - containerPort: 8778
+              name: jolokia
+              protocol: TCP
+            - containerPort: 9779
+              name: promethus
+              protocol: TCP
+          env:
+          - name: SPRING_PROFILES_ACTIVE
+            value: test
+          - name: TZ
+            value: "Asia/Shanghai"
+          - name: LANG
+            value: en_US.UTF-8
+          - name: JAVA_OPTS
+            value: "-Dfile.encoding=UTF8"
+          - name: AB_JOLOKIA_AUTH_OPENSHIFT
+            value: 'true'
+          - name: AB_JOLOKIA_OPTS
+            value: 'useSslClientAuthentication=false,protocol=https'
+          - name: 'AB_JOLOKIA_PASSWORD_RANDOM'
+            value: 'false'
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+              scheme: HTTP
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+              scheme: HTTP
+

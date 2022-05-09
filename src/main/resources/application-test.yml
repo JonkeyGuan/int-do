@@ -1,0 +1,3 @@
+service:
+  inventory.url: http://inventory-simple.base-data.svc.cluster.local:8080/api/inventory
+  delivery.url: http://delivery-simple.base-data.svc.cluster.local:8080/api/id
